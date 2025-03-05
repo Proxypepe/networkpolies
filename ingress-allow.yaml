@@ -1,0 +1,33 @@
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: "allow-ingress-nginx"
+  namespace: ingress-nginx
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/instance: ingress-nginx
+  ingress:
+    - fromEntities:
+        - world
+        - kube-apiserver
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            app: kube-prometheus-stack-prometheus 
+    - toServices:
+    # Services may be referenced by namespace + name
+      - k8sService:
+          serviceName: hubble-ui
+          namespace: kube-system
+      - k8sService:
+          serviceName: kube-dns
+          namespace: kube-system
+      - k8sServiceSelector:
+          namespace: monitoring
+          selector:
+            matchLabels:
+              app: kube-prometheus-stack-prometheus
+    - toEntities:
+      - kube-apiserver
+  

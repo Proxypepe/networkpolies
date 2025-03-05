@@ -1,0 +1,304 @@
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-kube-vip
+  namespace: kube-system
+spec:
+  endpointSelector:
+    matchLabels:
+      app: kube-vip
+  ingress:
+  - fromEndpoints:
+    - matchLabels:
+        component: kube-apiserver
+  egress:
+  - toEndpoints:
+    - matchLabels:
+        component: kube-apiserver
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-kube-scheduler
+  namespace: kube-system
+spec:
+  endpointSelector:
+    matchLabels:
+      component: kube-scheduler
+  ingress:
+  - fromEndpoints:
+    - matchLabels:
+        component: kube-apiserver
+  egress:
+  - toEndpoints:
+    - matchLabels:
+        component: kube-apiserver
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-kube-proxy
+  namespace: kube-system
+spec:
+  endpointSelector:
+    matchLabels:
+      k8s-app: kube-proxy
+  ingress:
+  - fromEndpoints:
+    - matchLabels:
+        k8s-app: kube-proxy
+  egress:
+  - toEndpoints:
+    - matchLabels:
+        component: kube-apiserver
+    - matchLabels:
+        k8s-app: kube-dns
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-kube-controller-manager
+  namespace: kube-system
+spec:
+  endpointSelector:
+    matchLabels:
+      component: kube-controller-manager
+  ingress:
+  - fromEndpoints:
+    - matchLabels:
+        component: kube-apiserver
+  egress:
+  - toEndpoints:
+    - matchLabels:
+        component: kube-apiserver
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-kube-apiserver
+  namespace: kube-system
+spec:
+  endpointSelector:
+    matchLabels:
+      component: kube-apiserver
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            k8s-app: cilium
+        - matchLabels:
+            k8s-app: hubble-replay
+        - matchLabels:
+            k8s-app: kube-proxy
+        - matchLabels:
+            k8s-app: kube-dns
+        - matchLabels:
+            component: kube-controller-manager
+        - matchLabels:
+            component: kube-scheduler
+        - matchLabels:
+            app.kubernetes.io/name: ingress-nginx
+            io.kubernetes.pod.namespace: ingress-nginx
+        - matchLabels:
+            app.kubernetes.io/name: prometheus
+            io.kubernetes.pod.namespace: monitoring
+      toPorts:
+        - ports:
+            - port: "6443"
+  egress:
+    - toEntities:
+        - cluster
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-hubble-ui
+  namespace: kube-system
+spec:
+  endpointSelector:
+    matchLabels:
+      k8s-app: hubble-ui
+  ingress:
+  - fromEndpoints:
+    - matchLabels:
+        k8s-app: hubble-relay
+  - fromEndpoints:
+    - matchLabels:
+        app.kubernetes.io/instance: ingress-nginx
+        io.kubernetes.pod.namespace: ingress-nginx
+  egress:
+  - toEndpoints:
+    - matchLabels:
+        k8s-app: hubble-relay
+  - toEntities:
+    - kube-apiserver
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-hubble-relay
+  namespace: kube-system
+spec:
+  endpointSelector:
+    matchLabels:
+      k8s-app: hubble-relay
+  ingress:
+  - fromEndpoints:
+    - matchLabels:
+        k8s-app: cilium
+    - matchLabels:
+        k8s-app: hubble-ui
+  egress:
+    - toEndpoints:
+      - matchLabels:
+          k8s-app: cilium
+      - matchLabels:
+          k8s-app: hubble-ui
+      - matchLabels:
+          k8s-app: kube-dns
+    - toEntities:
+      - remote-node
+      - host
+      - kube-apiserver
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-etcd
+  namespace: kube-system
+spec:
+  endpointSelector:
+    matchLabels:
+      component: etcd
+  ingress:
+  - fromEndpoints:
+    - matchLabels:
+        component: kube-apiserver
+  egress: []
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-cilium-operator
+  namespace: kube-system
+spec:
+  endpointSelector:
+    matchLabels:
+      k8s-app: cilium-operator
+  ingress:
+  - fromEndpoints:
+    - matchLabels:
+        k8s-app: cilium
+    - matchLabels:
+        k8s-app: cilium-operator
+    - matchLabels:
+        component: kube-apiserver
+  egress:
+  - toEndpoints:
+    - matchLabels:
+        k8s-app: cilium
+    - matchLabels:
+        k8s-app: cilium-operator
+    - matchLabels:
+        component: kube-apiserver
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-cilium-agent
+  namespace: kube-system
+spec:
+  endpointSelector:
+    matchLabels:
+      k8s-app: cilium
+  ingress:
+  - fromEndpoints:
+    - matchLabels:
+        k8s-app: cilium
+    - matchLabels:
+        k8s-app: cilium-operator
+    - matchLabels:
+        component: kube-apiserver
+    - matchLabels:
+        k8s-app: hubble-relay
+  egress:
+  - toEndpoints:
+    - matchLabels:
+        k8s-app: cilium
+    - matchLabels:
+        k8s-app: cilium-operator
+    - matchLabels:
+        component: kube-apiserver
+    - matchLabels:
+        k8s-app: hubble-relay
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-cilium-envoy
+  namespace: kube-system
+spec:
+  endpointSelector:
+    matchLabels:
+      k8s-app: cilium-envoy
+  ingress:
+  - fromEndpoints:
+    - matchLabels:
+        k8s-app: cilium
+    - matchLabels:
+        k8s-app: cilium-operator
+    - matchLabels:
+        k8s-app: hubble-relay
+  egress:
+  - toEndpoints:
+    - matchLabels:
+        k8s-app: cilium
+    - matchLabels:
+        k8s-app: cilium-operator
+    - matchLabels:
+        k8s-app: hubble-relay
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-coredns-egress-to-external-dns
+  namespace: kube-system
+spec:
+  endpointSelector:
+    matchLabels:
+      k8s-app: kube-dns
+  egress:
+  - toPorts:
+    - ports:
+      - port: "53"
+        protocol: UDP
+      - port: "53"
+        protocol: TCP
+    toEntities:
+    - world
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-coredns
+  namespace: kube-system
+spec:
+  endpointSelector:
+    matchLabels:
+      k8s-app: kube-dns
+  ingress:
+  - fromEndpoints:
+    - matchLabels:
+        k8s-app: cilium
+    - matchLabels:
+        k8s-app: kube-proxy
+    - matchLabels:
+        component: kube-apiserver
+    - matchLabels:
+        k8s-app: hubble-relay  
+  egress:
+    - toEndpoints:
+      - matchLabels:
+          k8s-app: kube-dns
+    - toEntities:
+      - kube-apiserver

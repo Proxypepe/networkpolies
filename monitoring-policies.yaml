@@ -1,0 +1,24 @@
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-prometheus
+  namespace: monitoring
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: prometheus
+  ingress:
+  - fromEndpoints:
+    - matchLabels:
+        app.kubernetes.io/instance: ingress-nginx
+        io.kubernetes.pod.namespace: ingress-nginx
+  egress:
+  - toEntities:
+    - host
+    - remote-node
+  - toEndpoints:
+    - matchLabels:
+        app.kubernetes.io/instance: ingress-nginx
+        io.kubernetes.pod.namespace: ingress-nginx
+
