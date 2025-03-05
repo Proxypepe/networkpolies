@@ -14,11 +14,134 @@ spec:
         app.kubernetes.io/instance: ingress-nginx
         io.kubernetes.pod.namespace: ingress-nginx
   egress:
-  - toEntities:
-    - host
-    - remote-node
-  - toEndpoints:
-    - matchLabels:
-        app.kubernetes.io/instance: ingress-nginx
-        io.kubernetes.pod.namespace: ingress-nginx
+    - toEntities:
+      - host
+      - remote-node
+      - kube-apiserver
+    - toEndpoints:
+      - matchLabels:
+          app.kubernetes.io/instance: ingress-nginx
+          io.kubernetes.pod.namespace: ingress-nginx
+    - toEndpoints:
+      - matchLabels:
+          app.kubernetes.io/name: kube-state-metrics
+      toPorts:
+        - ports:
+          - port: "8080"
+            protocol: TCP
+    - toEndpoints:
+      - matchLabels:
+          io.kubernetes.pod.namespace: kube-system
+          k8s-app: kube-dns
+      toPorts:
+        - ports:
+          - port: "9153"
+            protocol: TCP
+    - toEndpoints:
+      - matchLabels:
+          component: kube-scheduler
+          io.kubernetes.pod.namespace: kube-system
+      toPorts:
+        - ports:
+          - port: "10259"
+            protocol: TCP
+          rules:
+            http:
+            - method: GET
+              path: "/metrics"
+    - toEndpoints:
+      - matchLabels:
+          k8s-app: kube-proxy
+          io.kubernetes.pod.namespace: kube-system
+      toPorts:
+        - ports:
+          - port: "10249"
+            protocol: TCP
+          rules:
+            http:
+            - method: GET
+              path: "/metrics"
+    - toEndpoints:
+      - matchLabels:
+          component: etcd
+          io.kubernetes.pod.namespace: kube-system
+      toPorts:
+        - ports:
+          - port: "2381"
+            protocol: TCP
+          rules:
+            http:
+            - method: GET
+              path: "/metrics"
+    - toEndpoints:
+      - matchLabels:
+          component: kube-controller-manager
+          io.kubernetes.pod.namespace: kube-system
+      toPorts:
+        - ports:
+          - port: "10257"
+            protocol: TCP
+          rules:
+            http:
+            - method: GET
+              path: "/metrics"
+    - toEndpoints:
+      - matchLabels:
+          app.kubernetes.io/name: kube-prometheus-stack-prometheus-operator
+      toPorts:
+        - ports:
+          - port: "10250"
+            protocol: TCP
+          rule:
+            http:
+            - method: GET
+              path: "/metrics"
 
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-kube-state-metrics
+  namespace: monitoring
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: kube-state-metrics
+  ingress:
+    - fromEndpoints:
+      - matchLabels:
+            app.kubernetes.io/name: prometheus
+      toPorts:
+        - ports:
+          - port: "8080"
+            protocol: TCP
+  egress:
+    - toEntities:
+      - kube-apiserver
+      - host
+      - remote-node
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-prometheus-operator
+  namespace: monitoring
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: kube-prometheus-stack-prometheus-operator
+  ingress:
+    - fromEndpoints:
+      - matchLabels:
+          app.kubernetes.io/name: prometheus
+      toPorts:
+        - ports:
+          - port: "10250"
+            protocol: TCP
+          rule:
+            http:
+            - method: GET
+              path: "/metrics"
+  egress:
+    - toEntities: 
+      - kube-apiserver

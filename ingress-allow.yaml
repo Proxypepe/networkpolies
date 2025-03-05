@@ -14,7 +14,12 @@ spec:
   egress:
     - toEndpoints:
         - matchLabels:
-            app: kube-prometheus-stack-prometheus 
+            app.kubernetes.io/name: prometheus
+            io.kubernetes.pod.namespace: monitoring
+      toPorts:
+        - ports:
+          - port: "9090"
+            protocol: TCP
     - toServices:
     # Services may be referenced by namespace + name
       - k8sService:
@@ -23,11 +28,6 @@ spec:
       - k8sService:
           serviceName: kube-dns
           namespace: kube-system
-      - k8sServiceSelector:
-          namespace: monitoring
-          selector:
-            matchLabels:
-              app: kube-prometheus-stack-prometheus
     - toEntities:
       - kube-apiserver
   

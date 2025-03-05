@@ -30,6 +30,14 @@ spec:
   - fromEndpoints:
     - matchLabels:
         component: kube-apiserver
+  - fromEndpoints:
+    - matchLabels:
+        app.kubernetes.io/name: prometheus
+        io.kubernetes.pod.namespace: monitoring
+    toPorts:
+      - ports:
+        - port: "10259"
+          protocol: TCP
   egress:
   - toEndpoints:
     - matchLabels:
@@ -48,6 +56,18 @@ spec:
   - fromEndpoints:
     - matchLabels:
         k8s-app: kube-proxy
+  - fromEndpoints:
+    - matchLabels:
+        app.kubernetes.io/name: prometheus
+        io.kubernetes.pod.namespace: monitoring
+    toPorts:
+      - ports:
+        - port: "10249"
+          protocol: TCP
+        rules:
+          http:
+          - method: GET
+            path: "/metrics"
   egress:
   - toEndpoints:
     - matchLabels:
@@ -68,6 +88,18 @@ spec:
   - fromEndpoints:
     - matchLabels:
         component: kube-apiserver
+  - fromEndpoints:
+    - matchLabels:
+        app.kubernetes.io/name: prometheus
+        io.kubernetes.pod.namespace: monitoring
+    toPorts:
+      - ports:
+        - port: "10257"
+          protocol: TCP
+        rules:
+          http:
+          - method: GET
+            path: "/metrics"
   egress:
   - toEndpoints:
     - matchLabels:
@@ -130,6 +162,8 @@ spec:
   - toEndpoints:
     - matchLabels:
         k8s-app: hubble-relay
+    - matchLabels:
+        k8s-app: kube-dns
   - toEntities:
     - kube-apiserver
 ---
@@ -174,6 +208,18 @@ spec:
   - fromEndpoints:
     - matchLabels:
         component: kube-apiserver
+  - fromEndpoints:
+    - matchLabels:
+        app.kubernetes.io/name: prometheus
+        io.kubernetes.pod.namespace: monitoring
+    toPorts:
+      - ports:
+        - port: "2381"
+          protocol: TCP
+        rules:
+          http:
+          - method: GET
+            path: "/metrics"
   egress: []
 ---
 apiVersion: cilium.io/v2
@@ -295,7 +341,9 @@ spec:
     - matchLabels:
         component: kube-apiserver
     - matchLabels:
-        k8s-app: hubble-relay  
+        k8s-app: hubble-relay
+  - fromEntities:
+    - cluster  
   egress:
     - toEndpoints:
       - matchLabels:
