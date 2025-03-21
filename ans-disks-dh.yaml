@@ -1,0 +1,113 @@
+---
+- name: Setup disk filesystems for Kubernetes and related components
+  hosts: all
+  become: yes
+  vars:
+    disk: /dev/sdb
+    vg_name: vgname
+    lv_var_log_pods: 6gb
+    mp_var_log_pods: /var/log/pods
+    lv_var_lib_kubelet: 7gb
+    mp_var_lib_kubelet: /var/lib/kubelet
+    lv_var_lib_containerd: 10gb
+    mp_var_lib_containerd: /var/lib/containerd
+    lv_var_lib_etcd: 5gb
+    mp_var_lib_etcd: /var/lib/etcd
+    lv_var_log_flb_storage: 3gb
+    mp_var_log_flb_storage: /var/log/flb-storage
+
+  tasks:
+    - name: Create physical volume on {{ disk }}
+      community.general.lvg:
+        pvs: "{{ disk }}"
+        vg: "{{ vg_name }}"
+        state: present
+
+    - name: Create logical volume for {{ mp_var_log_pods }}
+      community.general.lvol:
+        vg: "{{ vg_name }}"
+        lv: "lv_var_log_pods"
+        size: "{{ lv_var_log_pods }}"
+        state: present
+
+    - name: Create logical volume for {{ mp_var_lib_kubelet }}
+      community.general.lvol:
+        vg: "{{ vg_name }}"
+        lv: "lv_var_lib_kubelet"
+        size: "{{ lv_var_lib_kubelet }}"
+        state: present
+
+    - name: Create logical volume for {{ mp_var_lib_containerd }}
+      community.general.lvol:
+        vg: "{{ vg_name }}"
+        lv: "lv_var_lib_containerd"
+        size: "{{ lv_var_lib_containerd }}"
+        state: present
+
+    - name: Create logical volume for {{ mp_var_lib_etcd }}
+      community.general.lvol:
+        vg: "{{ vg_name }}"
+        lv: "lv_var_lib_etcd"
+        size: "{{ lv_var_lib_etcd }}"
+        state: present
+
+    - name: Create logical volume for {{ mp_var_log_flb_storage }}
+      community.general.lvol:
+        vg: "{{ vg_name }}"
+        lv: "lv_var_log_flb_storage"
+        size: "{{ lv_var_log_flb_storage }}"
+        state: present
+
+    - name: Create XFS filesystem on {{ mp_var_log_pods }}
+      ansible.builtin.filesystem:
+        fstype: xfs
+        dev: "/dev/{{ vg_name }}/lv_var_log_pods"
+
+    - name: Create XFS filesystem on {{ mp_var_lib_kubelet }}
+      ansible.builtin.filesystem:
+        fstype: xfs
+        dev: "/dev/{{ vg_name }}/lv_var_lib_kubelet"
+
+    - name: Create XFS filesystem on {{ mp_var_lib_containerd }}
+      ansible.builtin.filesystem:
+        fstype: xfs
+        dev: "/dev/{{ vg_name }}/lv_var_lib_containerd"
+
+    - name: Create XFS filesystem on {{ mp_var_lib_etcd }}
+      ansible.builtin.filesystem:
+        fstype: xfs
+        dev: "/dev/{{ vg_name }}/lv_var_lib_etcd"
+
+    - name: Create XFS filesystem on {{ mp_var_log_flb_storage }}
+      ansible.builtin.filesystem:
+        fstype: xfs
+        dev: "/dev/{{ vg_name }}/lv_var_log_flb_storage"
+
+    - name: Ensure mount point directories exist
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - "{{ mp_var_log_pods }}"
+        - "{{ mp_var_lib_kubelet }}"
+        - "{{ mp_var_lib_containerd }}"
+        - "{{ mp_var_lib_etcd }}"
+        - "{{ mp_var_log_flb_storage }}"
+
+    - name: Add mount points to /etc/fstab
+      ansible.builtin.mount:
+        path: "{{ item.path }}"
+        src: "/dev/{{ vg_name }}/{{ item.lv }}"
+        fstype: xfs
+        opts: defaults
+        state: mounted
+      loop:
+        - { path: "{{ mp_var_log_pods }}", lv: "lv_var_log_pods" }
+        - { path: "{{ mp_var_lib_kubelet }}", lv: "lv_var_lib_kubelet" }
+        - { path: "{{ mp_var_lib_containerd }}", lv: "lv_var_lib_containerd" }
+        - { path: "{{ mp_var_lib_etcd }}", lv: "lv_var_lib_etcd" }
+        - { path: "{{ mp_var_log_flb_storage }}", lv: "lv_var_log_flb_storage" }
+
+    - name: Reload systemd and mount all filesystems
+      ansible.builtin.command: systemctl daemon-reload && mount -a
