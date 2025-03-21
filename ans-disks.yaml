@@ -1,0 +1,52 @@
+---
+- name: Configure LVM and mount point for containers
+  hosts: all
+  become: yes
+  tasks:
+    - name: Extend rootvg with /dev/sdb
+      community.general.lvg:
+        vg: rootvg
+        pvs: /dev/sdb
+        state: present
+
+    - name: Check physical volumes
+      command: pvs
+      register: pvs_output
+      changed_when: false
+
+    - name: Create logical volume for containers
+      community.general.lvol:
+        vg: rootvg
+        lv: containers_lv
+        size: 80G
+        state: present
+
+    - name: Resize logical volume for /var
+      community.general.lvol:
+        vg: rootvg
+        lv: var_lv
+        size: +10G
+        resizefs: yes
+        state: present
+
+    - name: Create XFS filesystem on containers_lv
+      ansible.builtin.filesystem:
+        fstype: xfs
+        dev: /dev/mapper/rootvg-containers_lv
+
+    - name: Ensure /var/lib/containers directory exists
+      ansible.builtin.file:
+        path: /var/lib/containers
+        state: directory
+        mode: '0755'
+
+    - name: Add mount point to /etc/fstab
+      ansible.builtin.mount:
+        path: /var/lib/containers
+        src: /dev/mapper/rootvg-containers_lv
+        fstype: xfs
+        opts: defaults
+        state: mounted
+
+    - name: Reload systemd and mount all filesystems
+      ansible.builtin.command: systemctl daemon-reload && mount -a
