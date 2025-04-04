@@ -1,5 +1,21 @@
-variable "group_base_name" {
+variable "admin_group" {
   description = "Base name for the groups that will be created"
+  type        = string
+}
+
+variable "view_group" {
+  description = "Base name for the groups that will be created"
+  type        = string
+}
+
+variable "permission_pattern" {
+  description = ""
+  type        = string
+  default     = ""
+}
+
+variable "project" {
+  description = ""
   type        = string
 }
 
