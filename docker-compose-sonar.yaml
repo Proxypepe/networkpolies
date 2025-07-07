@@ -1,0 +1,38 @@
+name: sonarqube
+
+services:
+  sonarqube:
+    image: sonarqube:25.6.0.109173-community
+    container_name: sonarqube
+    restart: always
+    network_mode: host
+    volumes:
+      - "sonarqube_data:/opt/sonarqube/data"
+      - "sonarqube_temp:/opt/sonarqube/temp"
+      - "sonarqube_extentions:/opt/sonarqube/extensions"
+      - "sonarqube_web:/opt/sonarqube/web"
+      - "sonarqube_conf:/opt/sonarqube/conf"
+    depends_on:
+      download-webapp:
+        condition: service_completed_successfully
+
+  download-webapp:
+    image: busybox:1.37
+    volumes:
+      - sonarqube_web:/web
+    command: >
+      sh -c "
+        wget -O /tmp/sonarqube-webapp.zip https://github.com/mc1arke/sonarqube-community-branch-plugin/releases/download/$${version}/sonarqube-webapp.zip &&
+        unzip -o /tmp/sonarqube-webapp.zip -d /web &&
+        chmod -R 755 /web &&
+        chown -R 1000:0 /web &&
+        rm -f /tmp/sonarqube-webapp.zip"
+    environment:
+      version: 25.6.0
+
+volumes:
+  sonarqube_data:
+  sonarqube_temp:
+  sonarqube_web:
+  sonarqube_extentions:
+  sonarqube_conf:
