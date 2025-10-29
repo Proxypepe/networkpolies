@@ -1,0 +1,30 @@
+---
+- name: Install latest CRI-O version
+  hosts: all
+  become: yes
+  tasks:
+    - name: Get available CRI-O versions
+      ansible.builtin.command:
+        cmd: dnf list --showduplicates cri-o
+      register: crio_versions
+      changed_when: false
+
+    - name: Extract latest CRI-O version
+      ansible.builtin.set_fact:
+        latest_crio_version: "{{ (crio_versions.stdout | regex_findall('cri-o\\S+\\s+(\\d+\\.\\d+\\.\\d+\\S*)')) | sort | last }}"
+
+    - name: Debug latest version
+      ansible.builtin.debug:
+        var: latest_crio_version
+
+    - name: Install latest CRI-O version
+      ansible.builtin.package:
+        name: cri-o
+        state: present
+        version: "{{ latest_crio_version }}"
+
+    - name: Start and enable CRI-O service
+      ansible.builtin.systemd:
+        name: crio
+        state: started
+        enabled: yes
