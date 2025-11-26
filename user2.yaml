@@ -37,3 +37,57 @@
         mode: "0440"
         validate: "visudo -cf %s"
       when: sudo_access
+---
+- name: Create multiple users with lineinfile sudo access
+  hosts: all
+  become: yes
+  vars:
+    users:
+      - username: "ab12345"
+        comment: "someemail"
+        shell: "/bin/bash"
+        uid: 12345
+        sudo_access: true
+      
+      - username: "cd67890"
+        comment: "anotheremail"
+        shell: "/bin/bash"
+        uid: 67890
+        sudo_access: true
+      
+      - username: "ef13579"
+        comment: "thirdemail"
+        shell: "/bin/zsh"
+        uid: 13579
+        sudo_access: false
+
+  tasks:
+    - name: Create users
+      ansible.builtin.user:
+        name: "{{ item.username }}"
+        comment: "{{ item.comment }}"
+        shell: "{{ item.shell | default('/bin/bash') }}"
+        uid: "{{ item.uid }}"
+        create_home: yes
+        state: present
+      loop: "{{ users }}"
+
+    - name: Ensure sudoers.d directory exists
+      ansible.builtin.file:
+        path: /etc/sudoers.d
+        state: directory
+        owner: root
+        group: root
+        mode: "0750"
+
+    - name: Add users to common sudoers file
+      ansible.builtin.lineinfile:
+        path: /etc/sudoers.d/users
+        line: "{{ item.username }} ALL=(ALL) ALL"
+        create: yes
+        owner: root
+        group: root
+        mode: "0440"
+        validate: "visudo -cf %s"
+      loop: "{{ users }}"
+      when: item.sudo_access | default(false)
