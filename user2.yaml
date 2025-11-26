@@ -1,0 +1,39 @@
+---
+- name: Create user with sudo access
+  hosts: all
+  become: yes
+  vars:
+    username: "ab12345"
+    user_comment: "someemail"
+    user_shell: "/bin/bash"
+    user_uid: 12345
+    sudo_access: true
+
+  tasks:
+    - name: Create user with specified parameters
+      ansible.builtin.user:
+        name: "{{ username }}"
+        comment: "{{ user_comment }}"
+        shell: "{{ user_shell }}"
+        uid: "{{ user_uid }}"
+        create_home: yes
+        state: present
+
+    - name: Ensure sudoers.d directory exists
+      ansible.builtin.file:
+        path: /etc/sudoers.d
+        state: directory
+        owner: root
+        group: root
+        mode: "0750"
+
+    - name: Add user to sudoers
+      ansible.builtin.lineinfile:
+        path: /etc/sudoers.d/users
+        line: "{{ username }} ALL=(ALL) ALL"
+        create: yes
+        owner: root
+        group: root
+        mode: "0440"
+        validate: "visudo -cf %s"
+      when: sudo_access
